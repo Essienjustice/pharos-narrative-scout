@@ -6,7 +6,7 @@ Pharos Narrative Scout is a TypeScript skill for generating a concise onchain na
 
 ## What The Skill Does
 
-The skill accepts a token symbol, token address, and protocol name. It fetches social signals from Elfa AI, market data from CoinGecko, and TVL data from DeFiLlama through `pharos-agent-kit`, then asks OpenAI to synthesize the result into a 2-3 sentence narrative with a normalized risk signal.
+The skill accepts a token symbol, token address, and protocol name. It fetches social placeholder data plus Pharos Mainnet transaction and block activity from SocialScan, then asks OpenAI to synthesize the result into a 2-3 sentence narrative with a normalized risk signal.
 
 ## Why It's Unique
 
@@ -41,18 +41,19 @@ PRIVATE_KEY=
 OPENAI_API_KEY=
 COINGECKO_API_KEY=
 ELFA_API_KEY=
-RPC_URL=
+NETWORK=mainnet
+RPC_URL=https://rpc.pharos.network
 ```
 
 Network:
 
-- Pharos Atlantic Testnet
-- Chain ID: `688688`
+- Pharos Mainnet
+- Chain ID: `1672`
 
 ## How To Run
 
 ```bash
-npm run scout -- PHRS 0x0000000000000000000000000000000000000000 pharos
+npm run scout -- PROS pros pharos
 ```
 
 ## Example Terminal Output
@@ -61,14 +62,14 @@ npm run scout -- PHRS 0x0000000000000000000000000000000000000000 pharos
 ═══════════════════════════════════════
    PHAROS NARRATIVE SCOUT
 ═══════════════════════════════════════
-  Token:    PHRS (0x0000000000000000000000000000000000000000)
+  Token:    PROS (pros)
   Protocol: pharos
 ───────────────────────────────────────
    Social:  184 mentions · 42.7% spike · Rank #6
    Price:   12.4% (24hr) · TOP GAINER
    TVL:     8.9% shift · $12450000
 ───────────────────────────────────────
-   PHRS is drawing fresh attention as smart mentions accelerate and price action confirms buyers are chasing the move. TVL is expanding alongside the rally, pointing to real protocol usage behind the social momentum instead of a purely speculative spike.
+   PROS is drawing fresh attention as smart mentions accelerate and mainnet activity confirms users are engaging with the network. Block activity is expanding alongside the move, pointing to real usage behind the social momentum instead of a purely speculative spike.
 
   Signal: BULLISH
 ═══════════════════════════════════════
@@ -80,8 +81,8 @@ Architecture overview:
 
 1. `scripts/scout.ts` reads CLI arguments and environment variables.
 2. `getSocialSignals` pulls Elfa AI trending token and smart mention data.
-3. `getPriceMovement` pulls CoinGecko price and top-gainer data.
-4. `getTVLShift` pulls DeFiLlama TVL data and computes 24 hour TVL shift.
+3. `getPriceMovement` pulls live PROS price, 24 hour change, and 24 hour volume from CoinGecko.
+4. `getTVLShift` pulls latest Pharos Mainnet block activity from SocialScan.
 5. `generateNarrative` sends the normalized data to OpenAI using `gpt-4o`.
 6. LangChain and pharos-agent-kit action wrappers expose the same workflow for agent runtimes.
 

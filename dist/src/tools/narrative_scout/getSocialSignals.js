@@ -6,7 +6,7 @@ export async function getSocialSignals(tokenSymbol) {
         source: "unavailable",
         rawData: {
             tokenSymbol,
-            note: "Social indexing for Pharos testnet tokens is not yet available on third-party APIs.",
+            note: "Social indexing for Pharos mainnet tokens is not yet available on third-party APIs.",
         },
     };
 }

@@ -9,8 +9,8 @@ Pharos Narrative Scout analyzes a Pharos token by combining social momentum, pri
 This skill cross-references three market and protocol signals:
 
 - Social signals from Elfa AI, including mention count, mention spike, and trending rank.
-- Price movement from CoinGecko, including current price, 24 hour change, and top-gainer status.
-- TVL shift from DeFiLlama, including current TVL and 24 hour TVL change.
+- Live PROS price movement from CoinGecko, including USD price, 24 hour percentage change, 24 hour volume, and top-gainer status.
+- Block activity from SocialScan Pharos Mainnet blocks, including latest block, block time, and transactions per block.
 
 It then uses OpenAI to generate a short analyst-style narrative and one normalized signal: `BULLISH`, `CAUTION`, or `BEARISH`.
 
@@ -18,16 +18,16 @@ It then uses OpenAI to generate a short analyst-style narrative and one normaliz
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `tokenSymbol` | `string` | Token ticker or symbol, such as `PHRS`. |
+| `tokenSymbol` | `string` | Token ticker or symbol, such as `PROS`. |
 | `tokenAddress` | `string` | Token contract address. |
-| `protocolName` | `string` | Protocol name or DeFiLlama protocol slug. |
+| `protocolName` | `string` | Protocol name or chain slug, such as `pharos`. |
 
 ## Example Input
 
 ```json
 {
-  "tokenSymbol": "PHRS",
-  "tokenAddress": "0x0000000000000000000000000000000000000000",
+  "tokenSymbol": "PROS",
+  "tokenAddress": "pros",
   "protocolName": "pharos"
 }
 ```
@@ -38,14 +38,14 @@ It then uses OpenAI to generate a short analyst-style narrative and one normaliz
 ═══════════════════════════════════════
    PHAROS NARRATIVE SCOUT
 ═══════════════════════════════════════
-  Token:    PHRS (0x0000000000000000000000000000000000000000)
+  Token:    PROS (pros)
   Protocol: pharos
 ───────────────────────────────────────
    Social:  184 mentions · 42.7% spike · Rank #6
    Price:   12.4% (24hr) · TOP GAINER
    TVL:     8.9% shift · $12450000
 ───────────────────────────────────────
-   PHRS is drawing fresh attention as smart mentions accelerate and price action confirms buyers are chasing the move. TVL is expanding alongside the rally, pointing to real protocol usage behind the social momentum instead of a purely speculative spike.
+   PROS is drawing fresh attention as smart mentions accelerate and mainnet activity confirms users are engaging with the network. Block activity is expanding alongside the move, pointing to real usage behind the social momentum instead of a purely speculative spike.
 
   Signal: BULLISH
 ═══════════════════════════════════════
@@ -66,5 +66,5 @@ It then uses OpenAI to generate a short analyst-style narrative and one normaliz
 
 ## Network
 
-- Pharos Atlantic Testnet
-- Chain ID: `688688`
+- Pharos Mainnet
+- Chain ID: `1672`

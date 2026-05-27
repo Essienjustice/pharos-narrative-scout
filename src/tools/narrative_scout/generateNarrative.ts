@@ -5,7 +5,7 @@ import type { SocialSignals as SocialData } from "./getSocialSignals.js";
 import type { TVLShift as TVLData } from "./getTVLShift.js";
 
 const SYSTEM_PROMPT =
-  "You are a sharp onchain analyst. You receive three data signals about a Pharos testnet token: social momentum, recent transaction activity, and latest block activity. Some fields use old market labels for compatibility, but txCount, avgGasPrice, latestBlock, blockTime, and txPerBlock are the primary activity signals. Treat currentPrice as average gas price, not a live token price. Treat TVL fields as block activity proxies, not real protocol TVL. If social data is unavailable, say so plainly without overstating it. Your job is to synthesize these into a 2-3 sentence plain-English narrative that explains what is happening and what it likely means, focusing on network activity signals instead of price and TVL. End with a single risk signal on its own line in this exact format - SIGNAL: BULLISH or SIGNAL: CAUTION or SIGNAL: BEARISH. Be direct, specific, and never generic. Never say 'it is important to' or 'this suggests'. Just state what is happening and what it means.";
+  "You are a sharp onchain analyst. You receive three data signals about a Pharos mainnet token: social momentum, live CoinGecko price data, and latest block activity. Include real price data in the narrative when currentPrice is available: USD price, 24 hour percentage change, and 24 hour volume if provided. Treat TVL fields as block activity proxies, not real protocol TVL. If social data or price data is unavailable, say so plainly without overstating it. Your job is to synthesize these into a 2-3 sentence plain-English narrative that explains what is happening and what it likely means. End with a single risk signal on its own line in this exact format - SIGNAL: BULLISH or SIGNAL: CAUTION or SIGNAL: BEARISH. Be direct, specific, and never generic. Never say 'it is important to' or 'this suggests'. Just state what is happening and what it means.";
 
 export type NarrativeSignal = "BULLISH" | "CAUTION" | "BEARISH";
 
@@ -44,17 +44,18 @@ function fallbackNarrative(
   price: PriceData,
   tvl: TVLData,
 ): Pick<GeneratedNarrative, "narrative" | "signal"> {
-  const txText =
-    price.txCount === null
-      ? "recent SocialScan transaction activity is unavailable"
-      : `${price.txCount} ${pluralize(
-          price.txCount,
-          "transaction",
-        )} appeared across the latest sampled blocks`;
-  const gasText =
-    price.avgGasPrice === null
-      ? "average gas price is unavailable"
-      : `average gas price is ${price.avgGasPrice} gwei`;
+  const priceText =
+    price.currentPrice === null
+      ? "live CoinGecko price data is unavailable"
+      : `PROS trades at $${price.currentPrice} with ${
+          price.change24hr === null
+            ? "unknown 24 hour change"
+            : `${price.change24hr}% 24 hour change`
+        } and ${
+          price.volume24hr === null
+            ? "unknown 24 hour volume"
+            : `$${price.volume24hr} in 24 hour volume`
+        }`;
   const blockText =
     tvl.latestBlock === null
       ? "latest block data is unavailable"
@@ -66,8 +67,13 @@ function fallbackNarrative(
         )}`;
 
   return {
-    narrative: `PHRS has no live DEX price or indexed protocol TVL in this scout, so SocialScan network activity is the main read. ${txText}, ${gasText}, and ${blockText}; social indexing remains unavailable for this Pharos testnet asset.`,
-    signal: social.mentionCount === 0 && !price.isActive ? "CAUTION" : "BULLISH",
+    narrative: `${priceText}. ${blockText}; social indexing remains unavailable for this Pharos mainnet asset.`,
+    signal:
+      price.change24hr !== null && price.change24hr < -10
+        ? "BEARISH"
+        : social.mentionCount === 0 && !price.isActive
+          ? "CAUTION"
+          : "BULLISH",
   };
 }
 

@@ -1,11 +1,11 @@
-const SOCIALSCAN_API_KEY = "102dfc05-661d-4efd-a81e-24afb3918c7f";
-const SOCIALSCAN_TRANSACTIONS_URL =
-  "https://api.socialscan.io/pharos-testnet/v1/explorer/transactions";
-const SOURCE = "SocialScan Pharos Testnet";
+const COINGECKO_PRICE_URL = "https://api.coingecko.com/api/v3/simple/price";
+const COINGECKO_ID = "pharos-network";
+const SOURCE = "CoinGecko";
 
 export interface PriceMovement {
   currentPrice: number | null;
   change24hr: number | null;
+  volume24hr: number | null;
   isTopGainer: boolean | null;
   txCount: number | null;
   avgGasPrice: number | null;
@@ -14,20 +14,13 @@ export interface PriceMovement {
   rawData: unknown | null;
 }
 
-interface SocialScanTransaction {
-  block_number?: number | string;
-  gas_price?: number | string;
-  gasPrice?: number | string;
-  gas_price_gwei?: number | string;
+interface CoinGeckoPriceData {
+  usd?: number;
+  usd_24h_change?: number;
+  usd_24h_vol?: number;
 }
 
-interface SocialScanTransactionsResponse {
-  data?: SocialScanTransaction[];
-  total?: number;
-  page?: number;
-  size?: number;
-  max_display?: number;
-}
+type CoinGeckoSimplePriceResponse = Record<string, CoinGeckoPriceData>;
 
 function errorSummary(error: unknown): unknown {
   if (!(error instanceof Error)) {
@@ -41,111 +34,75 @@ function errorSummary(error: unknown): unknown {
 }
 
 function asNumber(value: unknown): number | null {
-  const numberValue =
-    typeof value === "number"
-      ? value
-      : typeof value === "string"
-        ? Number(value)
-        : Number.NaN;
-
-  return Number.isFinite(numberValue) ? numberValue : null;
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
-function buildTransactionsUrl(): string {
-  const url = new URL(SOCIALSCAN_TRANSACTIONS_URL);
-  url.searchParams.set("size", "10");
-  url.searchParams.set("page", "1");
-  url.searchParams.set("apikey", SOCIALSCAN_API_KEY);
+function buildCoinGeckoUrl(): string {
+  const url = new URL(COINGECKO_PRICE_URL);
+  url.searchParams.set("ids", COINGECKO_ID);
+  url.searchParams.set("vs_currencies", "usd");
+  url.searchParams.set("include_24hr_change", "true");
+  url.searchParams.set("include_24hr_vol", "true");
+  url.searchParams.set("x_cg_demo_api_key", process.env.COINGECKO_API_KEY ?? "");
 
   return url.toString();
 }
 
-async function fetchLatestTransactions(): Promise<SocialScanTransactionsResponse> {
-  const endpoint = buildTransactionsUrl();
+function redactApiKey(endpoint: string): string {
+  const url = new URL(endpoint);
+
+  if (url.searchParams.has("x_cg_demo_api_key")) {
+    url.searchParams.set("x_cg_demo_api_key", "<redacted>");
+  }
+
+  return url.toString();
+}
+
+async function fetchCoinGeckoPrice(): Promise<CoinGeckoSimplePriceResponse> {
+  const endpoint = buildCoinGeckoUrl();
   const response = await fetch(endpoint);
 
   if (!response.ok) {
     throw new Error(
-      `SocialScan transactions failed: ${response.status} ${response.statusText}`,
+      `CoinGecko price failed: ${response.status} ${response.statusText}`,
     );
   }
 
-  return (await response.json()) as SocialScanTransactionsResponse;
-}
-
-function getGasPrice(transaction: SocialScanTransaction): number | null {
-  const gweiPrice = asNumber(transaction.gas_price_gwei);
-
-  if (gweiPrice !== null) {
-    return gweiPrice;
-  }
-
-  const weiPrice = asNumber(transaction.gas_price ?? transaction.gasPrice);
-
-  return weiPrice === null ? null : weiPrice / 1_000_000_000;
-}
-
-function average(values: number[]): number | null {
-  if (values.length === 0) {
-    return null;
-  }
-
-  return values.reduce((sum, value) => sum + value, 0) / values.length;
+  return (await response.json()) as CoinGeckoSimplePriceResponse;
 }
 
 export async function getPriceMovement(
   tokenSymbol: string,
 ): Promise<PriceMovement> {
-  const endpoint = buildTransactionsUrl();
+  const endpoint = buildCoinGeckoUrl();
+  const redactedEndpoint = redactApiKey(endpoint);
 
   try {
-    const response = await fetchLatestTransactions();
-    const latestTransactions = response.data ?? [];
-    const latestBlock = latestTransactions.reduce<number | null>(
-      (currentLatest, transaction) => {
-        const blockNumber = asNumber(transaction.block_number);
+    const response = await fetchCoinGeckoPrice();
+    const priceData = response[COINGECKO_ID];
 
-        if (blockNumber === null) {
-          return currentLatest;
-        }
+    if (!priceData) {
+      throw new Error(`CoinGecko response missing ${COINGECKO_ID} price data`);
+    }
 
-        return currentLatest === null
-          ? blockNumber
-          : Math.max(currentLatest, blockNumber);
-      },
-      null,
-    );
-    const tenBlockFloor =
-      latestBlock === null ? null : Math.max(0, latestBlock - 9);
-    const recentTransactions =
-      tenBlockFloor === null
-        ? latestTransactions
-        : latestTransactions.filter((transaction) => {
-            const blockNumber = asNumber(transaction.block_number);
-
-            return blockNumber !== null && blockNumber >= tenBlockFloor;
-          });
-    const txCount = recentTransactions.length;
-    const gasPrices = recentTransactions
-      .map(getGasPrice)
-      .filter((gasPrice): gasPrice is number => gasPrice !== null);
-    const avgGasPrice = average(gasPrices);
+    const currentPrice = asNumber(priceData.usd);
+    const change24hr = asNumber(priceData.usd_24h_change);
+    const volume24hr = asNumber(priceData.usd_24h_vol);
 
     return {
-      currentPrice: avgGasPrice,
-      change24hr: 0,
-      isTopGainer: false,
-      txCount,
-      avgGasPrice,
-      isActive: txCount > 0,
+      currentPrice,
+      change24hr,
+      volume24hr,
+      isTopGainer: change24hr === null ? null : change24hr > 10,
+      txCount: null,
+      avgGasPrice: null,
+      isActive: currentPrice !== null,
       source: SOURCE,
       rawData: {
         tokenSymbol,
-        endpoint,
-        latestBlock,
-        tenBlockFloor,
+        coinGeckoId: COINGECKO_ID,
+        endpoint: redactedEndpoint,
         response,
-        note: "PHRS is a Pharos testnet token, so average gas price from recent SocialScan transactions is used as the activity and demand proxy.",
       },
     };
   } catch (error) {
@@ -153,15 +110,17 @@ export async function getPriceMovement(
 
     return {
       currentPrice: null,
-      change24hr: 0,
-      isTopGainer: false,
+      change24hr: null,
+      volume24hr: null,
+      isTopGainer: null,
       txCount: null,
       avgGasPrice: null,
       isActive: false,
       source: SOURCE,
       rawData: {
         tokenSymbol,
-        endpoint,
+        coinGeckoId: COINGECKO_ID,
+        endpoint: redactedEndpoint,
         error: errorSummary(error),
       },
     };

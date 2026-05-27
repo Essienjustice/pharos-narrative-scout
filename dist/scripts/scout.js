@@ -52,12 +52,14 @@ async function main() {
     const narrative = await generateNarrative(social, price, tvl);
     console.log("=======================================");
     console.log("   PHAROS NARRATIVE SCOUT");
+    console.log("   Network: Pharos Mainnet");
+    console.log("   Chain ID: 1672");
     console.log("=======================================");
     console.log(`  Token:    ${tokenSymbol} (${tokenAddress})`);
     console.log(`  Protocol: ${protocolName}`);
     console.log("---------------------------------------");
     console.log(`   Social:  ${formatValue(social.mentionCount)} mentions - ${formatValue(social.mentionSpike)}% spike - Rank ${formatRank(social.trendingRank)}`);
-    console.log(`   Activity:${formatValue(price.txCount)} txs - avg gas ${formatValue(price.avgGasPrice)} gwei - ${price.isActive ? "ACTIVE" : "INACTIVE"}`);
+    console.log(`   Price:   $${formatValue(price.currentPrice)} - ${formatValue(price.change24hr)}% 24hr - volume $${formatValue(price.volume24hr)} - ${price.isTopGainer ? "TOP GAINER" : "NOT TOP GAINER"}`);
     console.log(`   Block:   #${formatValue(tvl.latestBlock)} - ${formatValue(tvl.txPerBlock)} txs - ${formatValue(tvl.blockTime)}`);
     console.log("---------------------------------------");
     console.log(`   ${narrative.narrative}`);

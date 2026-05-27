@@ -1,6 +1,7 @@
 const SOCIALSCAN_API_KEY = "102dfc05-661d-4efd-a81e-24afb3918c7f";
-const SOCIALSCAN_BLOCKS_URL = "https://api.socialscan.io/pharos-testnet/v1/explorer/blocks";
-const SOURCE = "SocialScan Pharos Testnet";
+const SOCIALSCAN_COMMAND_API_BASE_URL = "https://api.socialscan.io/pharos-mainnet/v1/explorer/command_api";
+const SOCIALSCAN_BLOCKS_URL = "https://api.socialscan.io/pharos-mainnet/v1/explorer/blocks";
+const SOURCE = "SocialScan Pharos Mainnet";
 function errorSummary(error) {
     if (!(error instanceof Error)) {
         return error;
@@ -55,9 +56,10 @@ export async function getTVLShift(protocolName) {
             source: SOURCE,
             rawData: {
                 protocolName,
+                commandApiBaseUrl: SOCIALSCAN_COMMAND_API_BASE_URL,
                 endpoint,
                 response,
-                note: "Pharos testnet protocol TVL is not indexed yet, so latest-block transaction count is used as a network activity proxy.",
+                note: "Pharos mainnet protocol TVL is not indexed yet, so latest-block transaction count is used as a network activity proxy.",
             },
         };
     }
@@ -73,6 +75,7 @@ export async function getTVLShift(protocolName) {
             source: SOURCE,
             rawData: {
                 protocolName,
+                commandApiBaseUrl: SOCIALSCAN_COMMAND_API_BASE_URL,
                 endpoint,
                 error: errorSummary(error),
             },
