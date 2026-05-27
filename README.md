@@ -6,7 +6,7 @@ Pharos Narrative Scout is a TypeScript skill for generating a concise onchain na
 
 ## What The Skill Does
 
-The skill accepts a token symbol, token address, and protocol name. It fetches social placeholder data plus Pharos Mainnet transaction and block activity from SocialScan, then asks OpenAI to synthesize the result into a 2-3 sentence narrative with a normalized risk signal.
+The skill fetches CoinGecko exchange listing count and trending rank as social signals, live PROS price data from CoinGecko, and Pharos TVL from DeFiLlama, then uses GPT-4o to synthesize a 2-3 sentence analyst narrative with a BULLISH / CAUTION / BEARISH risk signal.
 
 ## Why It's Unique
 
@@ -59,20 +59,22 @@ npm run scout -- PROS pros pharos
 ## Example Terminal Output
 
 ```text
-═══════════════════════════════════════
+=======================================
    PHAROS NARRATIVE SCOUT
-═══════════════════════════════════════
+   Network: Pharos Mainnet
+   Chain ID: 1672
+=======================================
   Token:    PROS (pros)
   Protocol: pharos
-───────────────────────────────────────
-   Social:  184 mentions · 42.7% spike · Rank #6
-   Price:   12.4% (24hr) · TOP GAINER
-   TVL:     8.9% shift · $12450000
-───────────────────────────────────────
-   PROS is drawing fresh attention as smart mentions accelerate and mainnet activity confirms users are engaging with the network. Block activity is expanding alongside the move, pointing to real usage behind the social momentum instead of a purely speculative spike.
+---------------------------------------
+   Social:  42 exchange listings - 0% spike - Rank #7
+   Price:   $0.0348 - 6.4% 24hr - volume $1,284,900 - NOT TOP GAINER
+   TVL:     $12,450,000 - 3.1% 24hr
+---------------------------------------
+   PROS is trading higher with active exchange coverage and a visible CoinGecko trending position, while 24 hour volume shows enough liquidity to make the move worth monitoring. Pharos TVL is also rising over the same window, giving the price strength some supporting network context.
 
   Signal: BULLISH
-═══════════════════════════════════════
+=======================================
 ```
 
 ## How It Works
