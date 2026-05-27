@@ -1,0 +1,23 @@
+{
+  "name": "pharos-narrative-scout",
+  "version": "0.1.0",
+  "private": true,
+  "description": "",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "scout": "ts-node scripts/scout.ts",
+    "start": "node dist/scripts/scout.js"
+  },
+  "dependencies": {
+    "@langchain/core": "^0.3.80",
+    "dotenv": "^17.4.2",
+    "openai": "^6.39.0",
+    "pharos-agent-kit": "^1.0.2",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  }
+}
