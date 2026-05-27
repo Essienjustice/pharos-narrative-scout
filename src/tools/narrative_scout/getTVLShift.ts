@@ -1,9 +1,6 @@
-const SOCIALSCAN_API_KEY = "102dfc05-661d-4efd-a81e-24afb3918c7f";
-const SOCIALSCAN_COMMAND_API_BASE_URL =
-  "https://api.socialscan.io/pharos-mainnet/v1/explorer/command_api";
-const SOCIALSCAN_BLOCKS_URL =
-  "https://api.socialscan.io/pharos-mainnet/v1/explorer/blocks";
-const SOURCE = "SocialScan Pharos Mainnet";
+const DEFILLAMA_HISTORY_URL =
+  "https://api.llama.fi/v2/historicalChainTvl/Pharos";
+const DEFILLAMA_CHAINS_URL = "https://api.llama.fi/chains";
 
 export interface TVLShift {
   currentTVL: number | null;
@@ -16,20 +13,15 @@ export interface TVLShift {
   rawData: unknown | null;
 }
 
-interface SocialScanBlock {
-  number?: number | string;
-  block_number?: number | string;
-  timestamp?: string;
-  block_timestamp?: string;
-  transaction_count?: number | string;
-  transactions_count?: number | string;
+interface HistoricalTvlEntry {
+  date?: unknown;
+  tvl?: unknown;
 }
 
-interface SocialScanBlocksResponse {
-  data?: SocialScanBlock[];
-  total?: number;
-  page?: number;
-  size?: number;
+interface ChainTvlEntry {
+  name?: unknown;
+  tvl?: unknown;
+  tvlPrevDay?: unknown;
 }
 
 function errorSummary(error: unknown): unknown {
@@ -54,81 +46,155 @@ function asNumber(value: unknown): number | null {
   return Number.isFinite(numberValue) ? numberValue : null;
 }
 
-function asString(value: unknown): string | null {
-  return typeof value === "string" && value.length > 0 ? value : null;
+async function fetchJson<T>(endpoint: string, label: string): Promise<T> {
+  try {
+    const response = await fetch(endpoint);
+
+    if (!response.ok) {
+      const body = await response.text().catch(() => "");
+
+      throw new Error(
+        `${label} failed: ${response.status} ${response.statusText}${
+          body ? ` - ${body}` : ""
+        }`,
+      );
+    }
+
+    return (await response.json()) as T;
+  } catch (error) {
+    throw error instanceof Error
+      ? error
+      : new Error(`${label} failed: ${String(error)}`);
+  }
 }
 
-function buildBlocksUrl(): string {
-  const url = new URL(SOCIALSCAN_BLOCKS_URL);
-  url.searchParams.set("size", "1");
-  url.searchParams.set("page", "1");
-  url.searchParams.set("apikey", SOCIALSCAN_API_KEY);
-
-  return url.toString();
-}
-
-async function fetchLatestBlock(): Promise<SocialScanBlocksResponse> {
-  const endpoint = buildBlocksUrl();
-  const response = await fetch(endpoint);
-
-  if (!response.ok) {
-    throw new Error(
-      `SocialScan blocks failed: ${response.status} ${response.statusText}`,
-    );
+function calculateTvlChange(currentTVL: number, previousTVL: number): number {
+  if (previousTVL === 0) {
+    return 0;
   }
 
-  return (await response.json()) as SocialScanBlocksResponse;
+  return ((currentTVL - previousTVL) / previousTVL) * 100;
+}
+
+async function fetchHistoricalTvl(): Promise<{
+  currentTVL: number | null;
+  tvlChange24hr: number;
+  response: HistoricalTvlEntry[];
+}> {
+  const response = await fetchJson<unknown>(
+    DEFILLAMA_HISTORY_URL,
+    "DeFiLlama historical TVL",
+  );
+  if (!Array.isArray(response)) {
+    throw new Error("DeFiLlama historical TVL response was not an array");
+  }
+
+  const latest = response[response.length - 1];
+  const previous = response[response.length - 2];
+  const currentTVL = asNumber(latest?.tvl);
+  const previousTVL = asNumber(previous?.tvl);
+
+  return {
+    currentTVL,
+    tvlChange24hr:
+      currentTVL === null || previousTVL === null
+        ? 0
+        : calculateTvlChange(currentTVL, previousTVL),
+    response,
+  };
+}
+
+async function fetchChainsTvl(): Promise<{
+  currentTVL: number | null;
+  tvlChange24hr: number;
+  response: ChainTvlEntry[];
+  pharos: ChainTvlEntry | null;
+}> {
+  const response = await fetchJson<unknown>(
+    DEFILLAMA_CHAINS_URL,
+    "DeFiLlama chains",
+  );
+  if (!Array.isArray(response)) {
+    throw new Error("DeFiLlama chains response was not an array");
+  }
+
+  const pharos =
+    response.find(
+      (chain) =>
+        typeof chain.name === "string" &&
+        chain.name.toLowerCase().includes("pharos"),
+    ) ?? null;
+  const currentTVL = asNumber(pharos?.tvl);
+  const previousTVL = asNumber(pharos?.tvlPrevDay);
+
+  return {
+    currentTVL,
+    tvlChange24hr:
+      currentTVL === null || previousTVL === null
+        ? 0
+        : calculateTvlChange(currentTVL, previousTVL),
+    response,
+    pharos,
+  };
 }
 
 export async function getTVLShift(protocolName: string): Promise<TVLShift> {
-  const endpoint = buildBlocksUrl();
-
   try {
-    const response = await fetchLatestBlock();
-    const latestBlockData = response.data?.[0] ?? null;
-    const latestBlock = asNumber(
-      latestBlockData?.number ?? latestBlockData?.block_number,
-    );
-    const blockTime =
-      asString(latestBlockData?.timestamp) ??
-      asString(latestBlockData?.block_timestamp);
-    const txPerBlock = asNumber(
-      latestBlockData?.transactions_count ?? latestBlockData?.transaction_count,
-    );
+    const historical = await fetchHistoricalTvl();
 
     return {
-      currentTVL: null,
-      tvlChange24hr: 0,
-      tvlProxy: txPerBlock,
-      latestBlock,
-      blockTime,
-      txPerBlock,
-      source: SOURCE,
-      rawData: {
-        protocolName,
-        commandApiBaseUrl: SOCIALSCAN_COMMAND_API_BASE_URL,
-        endpoint,
-        response,
-        note: "Pharos mainnet protocol TVL is not indexed yet, so latest-block transaction count is used as a network activity proxy.",
-      },
-    };
-  } catch (error) {
-    console.error("[getTVLShift] failed:", errorSummary(error));
-
-    return {
-      currentTVL: null,
-      tvlChange24hr: 0,
-      tvlProxy: null,
+      currentTVL: historical.currentTVL,
+      tvlChange24hr: historical.tvlChange24hr,
+      tvlProxy: historical.currentTVL,
       latestBlock: null,
       blockTime: null,
       txPerBlock: null,
-      source: SOURCE,
+      source: "DeFiLlama historicalChainTvl",
       rawData: {
         protocolName,
-        commandApiBaseUrl: SOCIALSCAN_COMMAND_API_BASE_URL,
-        endpoint,
-        error: errorSummary(error),
+        endpoint: DEFILLAMA_HISTORY_URL,
+        response: historical.response,
       },
     };
+  } catch (historyError) {
+    console.error("[getTVLShift] historical TVL failed:", errorSummary(historyError));
+
+    try {
+      const chains = await fetchChainsTvl();
+
+      return {
+        currentTVL: chains.currentTVL,
+        tvlChange24hr: chains.tvlChange24hr,
+        tvlProxy: chains.currentTVL,
+        latestBlock: null,
+        blockTime: null,
+        txPerBlock: null,
+        source: "DeFiLlama chains",
+        rawData: {
+          protocolName,
+          endpoint: DEFILLAMA_CHAINS_URL,
+          pharos: chains.pharos,
+        },
+      };
+    } catch (chainsError) {
+      console.error("[getTVLShift] chains fallback failed:", errorSummary(chainsError));
+
+      return {
+        currentTVL: null,
+        tvlChange24hr: 0,
+        tvlProxy: null,
+        latestBlock: null,
+        blockTime: null,
+        txPerBlock: null,
+        source: "unavailable",
+        rawData: {
+          protocolName,
+          historyEndpoint: DEFILLAMA_HISTORY_URL,
+          chainsEndpoint: DEFILLAMA_CHAINS_URL,
+          historyError: errorSummary(historyError),
+          chainsError: errorSummary(chainsError),
+        },
+      };
+    }
   }
 }

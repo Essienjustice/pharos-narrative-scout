@@ -6,6 +6,11 @@ function formatValue(value) {
 function formatRank(value) {
     return value === null ? "null" : `#${value}`;
 }
+function formatSocialLabel(source) {
+    return source === "CoinGecko Exchange Listings"
+        ? "exchange listings"
+        : "mentions";
+}
 function printUsage() {
     console.log("Usage: ts-node scripts/scout.ts <tokenSymbol> <tokenAddress> <protocolName>");
 }
@@ -58,9 +63,9 @@ async function main() {
     console.log(`  Token:    ${tokenSymbol} (${tokenAddress})`);
     console.log(`  Protocol: ${protocolName}`);
     console.log("---------------------------------------");
-    console.log(`   Social:  ${formatValue(social.mentionCount)} mentions - ${formatValue(social.mentionSpike)}% spike - Rank ${formatRank(social.trendingRank)}`);
+    console.log(`   Social:  ${formatValue(social.mentionCount)} ${formatSocialLabel(social.source)} - ${formatValue(social.mentionSpike)}% spike - Rank ${formatRank(social.trendingRank)}`);
     console.log(`   Price:   $${formatValue(price.currentPrice)} - ${formatValue(price.change24hr)}% 24hr - volume $${formatValue(price.volume24hr)} - ${price.isTopGainer ? "TOP GAINER" : "NOT TOP GAINER"}`);
-    console.log(`   Block:   #${formatValue(tvl.latestBlock)} - ${formatValue(tvl.txPerBlock)} txs - ${formatValue(tvl.blockTime)}`);
+    console.log(`   TVL:     $${formatValue(tvl.currentTVL)} - ${formatValue(tvl.tvlChange24hr)}% 24hr`);
     console.log("---------------------------------------");
     console.log(`   ${narrative.narrative}`);
     console.log("");

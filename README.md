@@ -80,9 +80,9 @@ npm run scout -- PROS pros pharos
 Architecture overview:
 
 1. `scripts/scout.ts` reads CLI arguments and environment variables.
-2. `getSocialSignals` pulls Elfa AI trending token and smart mention data.
+2. `getSocialSignals` pulls CoinGecko market volume as a social proxy plus CoinGecko trending rank.
 3. `getPriceMovement` pulls live PROS price, 24 hour change, and 24 hour volume from CoinGecko.
-4. `getTVLShift` pulls latest Pharos Mainnet block activity from SocialScan.
+4. `getTVLShift` pulls Pharos TVL from DeFiLlama with a chains-list fallback.
 5. `generateNarrative` sends the normalized data to OpenAI using `gpt-4o`.
 6. LangChain and pharos-agent-kit action wrappers expose the same workflow for agent runtimes.
 

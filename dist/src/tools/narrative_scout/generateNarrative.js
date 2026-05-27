@@ -1,6 +1,6 @@
 import "dotenv/config";
 import OpenAI from "openai";
-const SYSTEM_PROMPT = "You are a sharp onchain analyst. You receive three data signals about a Pharos mainnet token: social momentum, live CoinGecko price data, and latest block activity. Include real price data in the narrative when currentPrice is available: USD price, 24 hour percentage change, and 24 hour volume if provided. Treat TVL fields as block activity proxies, not real protocol TVL. If social data or price data is unavailable, say so plainly without overstating it. Your job is to synthesize these into a 2-3 sentence plain-English narrative that explains what is happening and what it likely means. End with a single risk signal on its own line in this exact format - SIGNAL: BULLISH or SIGNAL: CAUTION or SIGNAL: BEARISH. Be direct, specific, and never generic. Never say 'it is important to' or 'this suggests'. Just state what is happening and what it means.";
+const SYSTEM_PROMPT = "You are a sharp onchain analyst. You receive three data signals about a Pharos mainnet token: exchange-listing presence and CoinGecko trending rank, live CoinGecko price data, and DeFiLlama TVL movement. Include real price data in the narrative when currentPrice is available: USD price, 24 hour percentage change, and 24 hour volume if provided. Include TVL and 24 hour TVL change when available. If social proxy data, price data, or TVL data is unavailable, say so plainly without overstating it. Your job is to synthesize these into a 2-3 sentence plain-English narrative that explains what is happening and what it likely means. End with a single risk signal on its own line in this exact format - SIGNAL: BULLISH or SIGNAL: CAUTION or SIGNAL: BEARISH. Be direct, specific, and never generic. Never say 'it is important to' or 'this suggests'. Just state what is happening and what it means.";
 function parseNarrativeResponse(content) {
     const signalMatch = content.match(/^\s*SIGNAL:\s*(BULLISH|CAUTION|BEARISH)\s*$/im);
     if (!signalMatch) {
@@ -25,11 +25,11 @@ function fallbackNarrative(social, price, tvl) {
             : `${price.change24hr}% 24 hour change`} and ${price.volume24hr === null
             ? "unknown 24 hour volume"
             : `$${price.volume24hr} in 24 hour volume`}`;
-    const blockText = tvl.latestBlock === null
-        ? "latest block data is unavailable"
-        : `latest block ${tvl.latestBlock} at ${tvl.blockTime ?? "unknown time"} carried ${tvl.txPerBlock ?? 0} ${pluralize(tvl.txPerBlock, "transaction")}`;
+    const blockText = tvl.currentTVL === null
+        ? "Pharos TVL data is unavailable"
+        : `Pharos TVL is $${tvl.currentTVL} with ${tvl.tvlChange24hr ?? 0}% 24 hour TVL change`;
     return {
-        narrative: `${priceText}. ${blockText}; social indexing remains unavailable for this Pharos mainnet asset.`,
+        narrative: `${priceText}. ${blockText}; CoinGecko lists PROS on ${social.mentionCount} ticker markets and its trending rank is ${social.trendingRank === null ? "unavailable" : `#${social.trendingRank}`}.`,
         signal: price.change24hr !== null && price.change24hr < -10
             ? "BEARISH"
             : social.mentionCount === 0 && !price.isActive

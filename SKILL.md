@@ -8,9 +8,9 @@ Pharos Narrative Scout analyzes a Pharos token by combining social momentum, pri
 
 This skill cross-references three market and protocol signals:
 
-- Social signals from Elfa AI, including mention count, mention spike, and trending rank.
+- Social signals from CoinGecko market volume proxy and CoinGecko trending rank.
 - Live PROS price movement from CoinGecko, including USD price, 24 hour percentage change, 24 hour volume, and top-gainer status.
-- Block activity from SocialScan Pharos Mainnet blocks, including latest block, block time, and transactions per block.
+- TVL movement from DeFiLlama Pharos chain data, including current TVL and 24 hour TVL change.
 
 It then uses OpenAI to generate a short analyst-style narrative and one normalized signal: `BULLISH`, `CAUTION`, or `BEARISH`.
 

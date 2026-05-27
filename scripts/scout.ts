@@ -20,6 +20,12 @@ function formatRank(value: number | null): string {
   return value === null ? "null" : `#${value}`;
 }
 
+function formatSocialLabel(source: string): string {
+  return source === "CoinGecko Exchange Listings"
+    ? "exchange listings"
+    : "mentions";
+}
+
 function printUsage(): void {
   console.log(
     "Usage: ts-node scripts/scout.ts <tokenSymbol> <tokenAddress> <protocolName>",
@@ -92,7 +98,9 @@ async function main(): Promise<void> {
   console.log(`  Protocol: ${protocolName}`);
   console.log("---------------------------------------");
   console.log(
-    `   Social:  ${formatValue(social.mentionCount)} mentions - ${formatValue(
+    `   Social:  ${formatValue(social.mentionCount)} ${formatSocialLabel(
+      social.source,
+    )} - ${formatValue(
       social.mentionSpike,
     )}% spike - Rank ${formatRank(social.trendingRank)}`,
   );
@@ -104,9 +112,9 @@ async function main(): Promise<void> {
     }`,
   );
   console.log(
-    `   Block:   #${formatValue(tvl.latestBlock)} - ${formatValue(
-      tvl.txPerBlock,
-    )} txs - ${formatValue(tvl.blockTime)}`,
+    `   TVL:     $${formatValue(tvl.currentTVL)} - ${formatValue(
+      tvl.tvlChange24hr,
+    )}% 24hr`,
   );
   console.log("---------------------------------------");
   console.log(`   ${narrative.narrative}`);
