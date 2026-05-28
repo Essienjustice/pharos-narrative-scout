@@ -1,10 +1,12 @@
 const COINGECKO_PRICE_URL = "https://api.coingecko.com/api/v3/simple/price";
+const COINGECKO_SEARCH_URL = "https://api.coingecko.com/api/v3/search";
 const COINGECKO_API_KEY =
   process.env.COINGECKO_API_KEY || "CG-itm1SEKJTc6pg9f9N8qk2BR2";
-const COINGECKO_ID = "pharos-network";
 const SOURCE = "CoinGecko";
 
 export interface PriceMovement {
+  tokenSymbol: string;
+  coinGeckoId: string | null;
   currentPrice: number | null;
   change24hr: number | null;
   volume24hr: number | null;
@@ -24,6 +26,18 @@ interface CoinGeckoPriceData {
 
 type CoinGeckoSimplePriceResponse = Record<string, CoinGeckoPriceData>;
 
+interface CoinGeckoSearchCoin {
+  id?: unknown;
+  symbol?: unknown;
+}
+
+interface CoinGeckoSearchResponse {
+  coins?: CoinGeckoSearchCoin[];
+  data?: {
+    coins?: CoinGeckoSearchCoin[];
+  };
+}
+
 function errorSummary(error: unknown): unknown {
   if (!(error instanceof Error)) {
     return error;
@@ -39,15 +53,27 @@ function asNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
-function buildCoinGeckoUrl(): string {
-  const url = new URL(COINGECKO_PRICE_URL);
-  url.searchParams.set("ids", COINGECKO_ID);
-  url.searchParams.set("vs_currencies", "usd");
-  url.searchParams.set("include_24hr_change", "true");
-  url.searchParams.set("include_24hr_vol", "true");
+function withApiKey(url: URL): string {
   url.searchParams.set("x_cg_demo_api_key", COINGECKO_API_KEY);
 
   return url.toString();
+}
+
+function buildSearchUrl(tokenSymbol: string): string {
+  const url = new URL(COINGECKO_SEARCH_URL);
+  url.searchParams.set("query", tokenSymbol);
+
+  return withApiKey(url);
+}
+
+function buildCoinGeckoUrl(coinGeckoId: string): string {
+  const url = new URL(COINGECKO_PRICE_URL);
+  url.searchParams.set("ids", coinGeckoId);
+  url.searchParams.set("vs_currencies", "usd");
+  url.searchParams.set("include_24hr_change", "true");
+  url.searchParams.set("include_24hr_vol", "true");
+
+  return withApiKey(url);
 }
 
 function redactApiKey(endpoint: string): string {
@@ -60,31 +86,80 @@ function redactApiKey(endpoint: string): string {
   return url.toString();
 }
 
-async function fetchCoinGeckoPrice(): Promise<CoinGeckoSimplePriceResponse> {
-  const endpoint = buildCoinGeckoUrl();
+async function fetchJson<T>(endpoint: string, label: string): Promise<T> {
   const response = await fetch(endpoint);
 
   if (!response.ok) {
+    const body = await response.text().catch(() => "");
+
     throw new Error(
-      `CoinGecko price failed: ${response.status} ${response.statusText}`,
+      `${label} failed: ${response.status} ${response.statusText}${
+        body ? ` - ${body}` : ""
+      }`,
     );
   }
 
-  return (await response.json()) as CoinGeckoSimplePriceResponse;
+  return (await response.json()) as T;
+}
+
+function findCoinGeckoId(
+  response: CoinGeckoSearchResponse,
+  tokenSymbol: string,
+): string | null {
+  const coins = response.data?.coins ?? response.coins ?? [];
+  const match = coins.find(
+    (coin) =>
+      typeof coin.id === "string" &&
+      typeof coin.symbol === "string" &&
+      coin.symbol.toLowerCase() === tokenSymbol.toLowerCase(),
+  );
+
+  return typeof match?.id === "string" ? match.id : null;
 }
 
 export async function getPriceMovement(
   tokenSymbol: string,
 ): Promise<PriceMovement> {
-  const endpoint = buildCoinGeckoUrl();
-  const redactedEndpoint = redactApiKey(endpoint);
+  const searchEndpoint = buildSearchUrl(tokenSymbol);
+  const redactedSearchEndpoint = redactApiKey(searchEndpoint);
 
   try {
-    const response = await fetchCoinGeckoPrice();
-    const priceData = response[COINGECKO_ID];
+    const searchResponse = await fetchJson<CoinGeckoSearchResponse>(
+      searchEndpoint,
+      "CoinGecko search",
+    );
+    const coinGeckoId = findCoinGeckoId(searchResponse, tokenSymbol);
+
+    if (!coinGeckoId) {
+      return {
+        tokenSymbol,
+        coinGeckoId: null,
+        currentPrice: null,
+        change24hr: null,
+        volume24hr: null,
+        isTopGainer: null,
+        txCount: null,
+        avgGasPrice: null,
+        isActive: false,
+        source: SOURCE,
+        rawData: {
+          tokenSymbol,
+          searchEndpoint: redactedSearchEndpoint,
+          searchResponse,
+          error: `No CoinGecko coin found for symbol ${tokenSymbol}`,
+        },
+      };
+    }
+
+    const priceEndpoint = buildCoinGeckoUrl(coinGeckoId);
+    const response = await fetchJson<CoinGeckoSimplePriceResponse>(
+      priceEndpoint,
+      "CoinGecko price",
+    );
+    const priceData = response[coinGeckoId];
 
     if (!priceData) {
-      throw new Error(`CoinGecko response missing ${COINGECKO_ID} price data`);
+      throw new Error(`CoinGecko response missing ${coinGeckoId} price data`);
     }
 
     const currentPrice = asNumber(priceData.usd);
@@ -92,6 +167,8 @@ export async function getPriceMovement(
     const volume24hr = asNumber(priceData.usd_24h_vol);
 
     return {
+      tokenSymbol,
+      coinGeckoId,
       currentPrice,
       change24hr,
       volume24hr,
@@ -102,8 +179,9 @@ export async function getPriceMovement(
       source: SOURCE,
       rawData: {
         tokenSymbol,
-        coinGeckoId: COINGECKO_ID,
-        endpoint: redactedEndpoint,
+        coinGeckoId,
+        searchEndpoint: redactedSearchEndpoint,
+        priceEndpoint: redactApiKey(priceEndpoint),
         response,
       },
     };
@@ -111,6 +189,8 @@ export async function getPriceMovement(
     console.error("[getPriceMovement] failed:", errorSummary(error));
 
     return {
+      tokenSymbol,
+      coinGeckoId: null,
       currentPrice: null,
       change24hr: null,
       volume24hr: null,
@@ -121,8 +201,7 @@ export async function getPriceMovement(
       source: SOURCE,
       rawData: {
         tokenSymbol,
-        coinGeckoId: COINGECKO_ID,
-        endpoint: redactedEndpoint,
+        searchEndpoint: redactedSearchEndpoint,
         error: errorSummary(error),
       },
     };

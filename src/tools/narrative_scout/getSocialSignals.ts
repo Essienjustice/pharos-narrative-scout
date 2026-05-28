@@ -1,13 +1,14 @@
-const COINGECKO_COIN_URL =
-  "https://api.coingecko.com/api/v3/coins/pharos-network";
+const COINGECKO_COIN_BASE_URL = "https://api.coingecko.com/api/v3/coins";
+const COINGECKO_SEARCH_URL = "https://api.coingecko.com/api/v3/search";
 const COINGECKO_TRENDING_URL =
   "https://api.coingecko.com/api/v3/search/trending";
 const COINGECKO_API_KEY =
   process.env.COINGECKO_API_KEY || "CG-itm1SEKJTc6pg9f9N8qk2BR2";
-const COINGECKO_ID = "pharos-network";
 const SOURCE = "CoinGecko Exchange Listings";
 
 export interface SocialSignals {
+  tokenSymbol: string;
+  coinGeckoId: string | null;
   mentionCount: number;
   mentionSpike: number;
   trendingRank: number | null;
@@ -17,6 +18,18 @@ export interface SocialSignals {
 
 interface CoinGeckoCoinResponse {
   tickers?: unknown[];
+}
+
+interface CoinGeckoSearchCoin {
+  id?: unknown;
+  symbol?: unknown;
+}
+
+interface CoinGeckoSearchResponse {
+  coins?: CoinGeckoSearchCoin[];
+  data?: {
+    coins?: CoinGeckoSearchCoin[];
+  };
 }
 
 interface CoinGeckoTrendingCoin {
@@ -50,8 +63,15 @@ function buildTrendingUrl(): string {
   return withApiKey(new URL(COINGECKO_TRENDING_URL));
 }
 
-function buildCoinUrl(): string {
-  const url = new URL(COINGECKO_COIN_URL);
+function buildSearchUrl(tokenSymbol: string): string {
+  const url = new URL(COINGECKO_SEARCH_URL);
+  url.searchParams.set("query", tokenSymbol);
+
+  return withApiKey(url);
+}
+
+function buildCoinUrl(coinGeckoId: string): string {
+  const url = new URL(`${COINGECKO_COIN_BASE_URL}/${coinGeckoId}`);
 
   url.searchParams.set("localization", "false");
   url.searchParams.set("tickers", "true");
@@ -88,15 +108,61 @@ async function fetchJson<T>(endpoint: string, label: string): Promise<T> {
   return (await response.json()) as T;
 }
 
+function findCoinGeckoId(
+  response: CoinGeckoSearchResponse,
+  tokenSymbol: string,
+): string | null {
+  const coins = response.data?.coins ?? response.coins ?? [];
+  const match = coins.find(
+    (coin) =>
+      typeof coin.id === "string" &&
+      typeof coin.symbol === "string" &&
+      coin.symbol.toLowerCase() === tokenSymbol.toLowerCase(),
+  );
+
+  return typeof match?.id === "string" ? match.id : null;
+}
+
 export async function getSocialSignals(
   tokenSymbol: string,
 ): Promise<SocialSignals> {
+  const searchEndpoint = buildSearchUrl(tokenSymbol);
   const trendingEndpoint = buildTrendingUrl();
-  const coinEndpoint = buildCoinUrl();
+  let searchResponse: CoinGeckoSearchResponse | null = null;
   let trendingResponse: CoinGeckoTrendingResponse | null = null;
   let coinResponse: CoinGeckoCoinResponse | null = null;
+  let coinGeckoId: string | null = null;
   let trendingRank: number | null = null;
   let mentionCount = 0;
+
+  try {
+    searchResponse = await fetchJson<CoinGeckoSearchResponse>(
+      searchEndpoint,
+      "CoinGecko search",
+    );
+    coinGeckoId = findCoinGeckoId(searchResponse, tokenSymbol);
+  } catch (error) {
+    console.error("[getSocialSignals] CoinGecko search failed:", errorSummary(error));
+  }
+
+  if (!coinGeckoId) {
+    return {
+      tokenSymbol,
+      coinGeckoId: null,
+      mentionCount,
+      mentionSpike: 0,
+      trendingRank,
+      source: SOURCE,
+      rawData: {
+        tokenSymbol,
+        searchEndpoint: redactApiKey(searchEndpoint),
+        searchResponse,
+        error: `No CoinGecko coin found for symbol ${tokenSymbol}`,
+      },
+    };
+  }
+
+  const coinEndpoint = buildCoinUrl(coinGeckoId);
 
   try {
     trendingResponse = await fetchJson<CoinGeckoTrendingResponse>(
@@ -104,7 +170,7 @@ export async function getSocialSignals(
       "CoinGecko trending",
     );
     const trendingIndex =
-      trendingResponse.coins?.findIndex((coin) => coin.item?.id === COINGECKO_ID) ??
+      trendingResponse.coins?.findIndex((coin) => coin.item?.id === coinGeckoId) ??
       -1;
 
     trendingRank = trendingIndex === -1 ? null : trendingIndex + 1;
@@ -125,14 +191,19 @@ export async function getSocialSignals(
   }
 
   return {
+    tokenSymbol,
+    coinGeckoId,
     mentionCount,
     mentionSpike: 0,
     trendingRank,
     source: SOURCE,
     rawData: {
       tokenSymbol,
+      coinGeckoId,
+      searchEndpoint: redactApiKey(searchEndpoint),
       trendingEndpoint: redactApiKey(trendingEndpoint),
       coinEndpoint: redactApiKey(coinEndpoint),
+      searchResponse,
       trendingResponse,
       coinResponse,
     },

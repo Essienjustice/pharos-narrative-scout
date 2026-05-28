@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { PharosAgentKit } from "pharos-agent-kit";
+const DEFAULT_RPC_URL = "https://rpc.pharos.network";
 function formatValue(value) {
     return value === null || value === undefined ? "null" : String(value);
 }
@@ -37,14 +38,15 @@ async function main() {
         process.exit(1);
     }
     const privateKey = process.env.PRIVATE_KEY;
-    const rpcUrl = process.env.RPC_URL;
-    if (!privateKey || !rpcUrl) {
-        console.error("Missing PRIVATE_KEY or RPC_URL in .env");
+    const openAiApiKey = process.env.OPENAI_API_KEY;
+    const rpcUrl = process.env.RPC_URL || DEFAULT_RPC_URL;
+    if (!privateKey || !openAiApiKey) {
+        console.error("Missing PRIVATE_KEY or OPENAI_API_KEY in .env");
         process.exit(1);
     }
     (_a = process.env).PHAROS_PRIVATE_KEY ?? (_a.PHAROS_PRIVATE_KEY = privateKey);
     new PharosAgentKit(privateKey, rpcUrl, {
-        OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+        OPENAI_API_KEY: openAiApiKey,
         ELFA_AI_API_KEY: process.env.ELFA_API_KEY,
         COINGECKO_PRO_API_KEY: process.env.COINGECKO_API_KEY,
     });

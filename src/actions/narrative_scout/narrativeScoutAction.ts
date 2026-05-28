@@ -16,7 +16,7 @@ const narrativeScoutAction: Action = {
     "onchain analysis",
   ],
   description:
-    "Analyzes a Pharos token by cross-referencing social signals, price movement, and TVL shift to generate a plain-English onchain narrative and risk signal.",
+    "Analyzes a token by cross-referencing social signals, price movement, and TVL shift to generate a plain-English onchain narrative and risk signal.",
   examples: [],
   schema: z.object({
     tokenSymbol: z.string().min(1),

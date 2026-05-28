@@ -4,7 +4,7 @@ export class NarrativeScoutTool extends Tool {
     constructor() {
         super(...arguments);
         this.name = "pharos_narrative_scout";
-        this.description = "Analyzes a Pharos token by cross-referencing social signals, price movement, and TVL shift to generate a plain-English onchain narrative and risk signal. Input is a JSON string with fields: tokenSymbol (string), tokenAddress (string), protocolName (string).";
+        this.description = "Analyzes a token by cross-referencing social signals, price movement, and TVL shift to generate a plain-English onchain narrative and risk signal. Input is a JSON string with fields: tokenSymbol (string), tokenAddress (string), protocolName (string).";
     }
     async _call(input) {
         const { tokenSymbol, tokenAddress, protocolName } = JSON.parse(input);
