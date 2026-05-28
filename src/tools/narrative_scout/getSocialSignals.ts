@@ -2,6 +2,8 @@ const COINGECKO_COIN_URL =
   "https://api.coingecko.com/api/v3/coins/pharos-network";
 const COINGECKO_TRENDING_URL =
   "https://api.coingecko.com/api/v3/search/trending";
+const COINGECKO_API_KEY =
+  process.env.COINGECKO_API_KEY || "CG-itm1SEKJTc6pg9f9N8qk2BR2";
 const COINGECKO_ID = "pharos-network";
 const SOURCE = "CoinGecko Exchange Listings";
 
@@ -39,7 +41,7 @@ function errorSummary(error: unknown): unknown {
 }
 
 function withApiKey(url: URL): string {
-  url.searchParams.set("x_cg_demo_api_key", process.env.COINGECKO_API_KEY ?? "");
+  url.searchParams.set("x_cg_demo_api_key", COINGECKO_API_KEY);
 
   return url.toString();
 }

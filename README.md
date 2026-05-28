@@ -34,13 +34,13 @@ Create a `.env` file from the example:
 cp .env.example .env
 ```
 
-Fill in the required values:
+Configure the environment values:
 
 ```env
-PRIVATE_KEY=
-OPENAI_API_KEY=
-COINGECKO_API_KEY=
-ELFA_API_KEY=
+PRIVATE_KEY=                 # required
+OPENAI_API_KEY=              # required
+COINGECKO_API_KEY=           # optional - built-in default
+ELFA_API_KEY=                # optional
 NETWORK=mainnet
 RPC_URL=https://rpc.pharos.network
 ```

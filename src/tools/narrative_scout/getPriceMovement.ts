@@ -1,4 +1,6 @@
 const COINGECKO_PRICE_URL = "https://api.coingecko.com/api/v3/simple/price";
+const COINGECKO_API_KEY =
+  process.env.COINGECKO_API_KEY || "CG-itm1SEKJTc6pg9f9N8qk2BR2";
 const COINGECKO_ID = "pharos-network";
 const SOURCE = "CoinGecko";
 
@@ -43,7 +45,7 @@ function buildCoinGeckoUrl(): string {
   url.searchParams.set("vs_currencies", "usd");
   url.searchParams.set("include_24hr_change", "true");
   url.searchParams.set("include_24hr_vol", "true");
-  url.searchParams.set("x_cg_demo_api_key", process.env.COINGECKO_API_KEY ?? "");
+  url.searchParams.set("x_cg_demo_api_key", COINGECKO_API_KEY);
 
   return url.toString();
 }

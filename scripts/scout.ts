@@ -5,6 +5,8 @@ import type { getPriceMovement } from "../src/tools/narrative_scout/getPriceMove
 import type { getSocialSignals } from "../src/tools/narrative_scout/getSocialSignals.js";
 import type { getTVLShift } from "../src/tools/narrative_scout/getTVLShift.js";
 
+const DEFAULT_RPC_URL = "https://rpc.pharos.network";
+
 interface NarrativeScoutTools {
   generateNarrative: typeof generateNarrative;
   getPriceMovement: typeof getPriceMovement;
@@ -65,16 +67,17 @@ async function main(): Promise<void> {
   }
 
   const privateKey = process.env.PRIVATE_KEY;
-  const rpcUrl = process.env.RPC_URL;
+  const openAiApiKey = process.env.OPENAI_API_KEY;
+  const rpcUrl = process.env.RPC_URL || DEFAULT_RPC_URL;
 
-  if (!privateKey || !rpcUrl) {
-    console.error("Missing PRIVATE_KEY or RPC_URL in .env");
+  if (!privateKey || !openAiApiKey) {
+    console.error("Missing PRIVATE_KEY or OPENAI_API_KEY in .env");
     process.exit(1);
   }
 
   process.env.PHAROS_PRIVATE_KEY ??= privateKey;
   new PharosAgentKit(privateKey, rpcUrl, {
-    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+    OPENAI_API_KEY: openAiApiKey,
     ELFA_AI_API_KEY: process.env.ELFA_API_KEY,
     COINGECKO_PRO_API_KEY: process.env.COINGECKO_API_KEY,
   });
