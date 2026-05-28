@@ -6,7 +6,7 @@ Pharos Narrative Scout is a TypeScript skill for generating a concise onchain na
 
 ## What The Skill Does
 
-The skill fetches CoinGecko exchange listing count and trending rank as social signals, live PROS price data from CoinGecko, and Pharos TVL from DeFiLlama, then uses GPT-4o to synthesize a 2-3 sentence analyst narrative with a BULLISH / CAUTION / BEARISH risk signal.
+The skill accepts a token symbol and protocol name. It fetches live PROS price data and social signals from CoinGecko, Pharos TVL from DeFiLlama, then uses GPT-4o to synthesize a 2-3 sentence plain-English analyst narrative with a BULLISH / CAUTION / BEARISH risk signal.
 
 ## Why It's Unique
 
@@ -37,12 +37,15 @@ cp .env.example .env
 Configure the environment values:
 
 ```env
-PRIVATE_KEY=                 # required
-OPENAI_API_KEY=              # required
-COINGECKO_API_KEY=           # optional - built-in default
-ELFA_API_KEY=                # optional
-NETWORK=mainnet
-RPC_URL=https://rpc.pharos.network
+# Required
+PRIVATE_KEY=0x_your_wallet_private_key
+OPENAI_API_KEY=your_openai_api_key
+
+# Optional - defaults built in
+COINGECKO_API_KEY=  # Built-in demo key included
+ELFA_API_KEY=       # Optional
+NETWORK=mainnet     # Default: mainnet
+RPC_URL=            # Default: https://rpc.pharos.network
 ```
 
 Network:
@@ -59,22 +62,25 @@ npm run scout -- PROS pros pharos
 ## Example Terminal Output
 
 ```text
-=======================================
-   PHAROS NARRATIVE SCOUT
-   Network: Pharos Mainnet
-   Chain ID: 1672
-=======================================
+════════════════════════════════════════
+  PHAROS NARRATIVE SCOUT
+  Network: Pharos Mainnet
+  Chain ID: 1672
+════════════════════════════════════════
   Token:    PROS (pros)
   Protocol: pharos
----------------------------------------
-   Social:  42 exchange listings - 0% spike - Rank #7
-   Price:   $0.0348 - 6.4% 24hr - volume $1,284,900 - NOT TOP GAINER
-   TVL:     $12,450,000 - 3.1% 24hr
----------------------------------------
-   PROS is trading higher with active exchange coverage and a visible CoinGecko trending position, while 24 hour volume shows enough liquidity to make the move worth monitoring. Pharos TVL is also rising over the same window, giving the price strength some supporting network context.
+────────────────────────────────────────
+  Social:  21 exchange listings - 0% spike - Rank null
+  Price:   $0.669619 - 8.77% 24hr - volume $12,316,091 - NOT TOP GAINER
+  TVL:     $859,096 - 0.43% 24hr
+────────────────────────────────────────
+  PROS trades at $0.669619 with 8.77% 24 hour change
+  and $12,316,091 in 24 hour volume. Pharos TVL is
+  $859,096 with 0.43% 24 hour TVL change; CoinGecko
+  lists PROS on 21 ticker markets.
 
   Signal: BULLISH
-=======================================
+════════════════════════════════════════
 ```
 
 ## How It Works
